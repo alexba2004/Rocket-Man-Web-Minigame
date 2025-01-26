@@ -4,20 +4,19 @@
     <link rel="stylesheet" href="styles/style.css" type="text/css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jueguillo</title>
+    <title>Rocket Man</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        @font-face {
+            font-family: 'PixelFont';
+            src: url('src/assets/fonts/pixel-font.ttf') format('truetype');
+        }
 
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
             overflow: hidden;
-            background-image: url('src/assets/backgrounds/SpaceBackground1.jpg');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-            font-family: 'Press Start 2P', cursive; /* Tipografía pixelada */
+            font-family: 'PixelFont', sans-serif;
         }
 
         #game-container {
@@ -30,116 +29,210 @@
             position: absolute;
             top: 0;
             left: 0;
+            z-index: 1;
+            background-image: url('src/assets/backgrounds/Background1.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+
+        #start-screen, #game-over-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            text-align: center;
+            font-family: 'PixelFont', sans-serif;
+        }
+
+        #start-screen {
+            background-image: url('src/assets/backgrounds/Background1.jpg');
+        }
+
+        #game-over-screen {
+            background-image: url('src/assets/backgrounds/Background2.jpg');
+        }
+
+        .screen-title {
+            font-size: 50px;
+            color: white;
+            text-shadow: 2px 2px black;
+            margin-bottom: 20px;
+        }
+
+        .screen-button {
+            font-size: 25px;
+            color: white;
+            background-color: black;
+            border: 3px solid white;
+            padding: 10px 40px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'PixelFont', sans-serif;
+        }
+
+        .screen-button:hover {
+            background-color: white;
+            color: black;
         }
 
         #character-selection {
-            display: flex;
+            display: none;
             justify-content: center;
             align-items: center;
             flex-wrap: wrap;
             height: 100vh;
-            background-color: rgba(244, 244, 244, 0.8);
+            background-color: black;
+            z-index: 2;
+            font-family: 'PixelFont', sans-serif;
         }
 
         #character-options {
             display: flex;
-            gap: 20px;
+            gap: 30px;
             flex-wrap: wrap;
             justify-content: center;
         }
 
-        #max-score {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 16px;
+        .character-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .character-button img {
+            width: 200px;
+            height: 200px;
+            object-fit: contain;
+            border: 3px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .character-button span {
+            margin-top: 10px;
+            font-size: 20px;
             color: white;
+        }
+
+        .character-button:hover img {
+            border-color: white;
+        }
+
+        .score {
+            font-size: 30px;
+            color: white;
+            text-shadow: 2px 2px black;
         }
     </style>
 </head>
 <body>
     <div id="game-container">
+        <div id="start-screen">
+            <div class="screen-title">Rocket Man</div>
+            <button class="screen-button" onclick="showCharacterSelection()">Start</button>
+        </div>
+
         <div id="character-selection">
-            <h2 style="width: 100%; text-align: center;">Selecciona tu personaje</h2>
+            <h2 style="width: 100%; text-align: center; color: white; font-size: 30px;">Select Your Rocket</h2>
             <div id="character-options"></div>
         </div>
+
         <canvas id="canvas" style="display: none;"></canvas>
-        <div id="max-score">Máxima puntuación: 0</div>
+
+        <div id="game-over-screen" style="display: none;">
+            <div class="screen-title">Game Over</div>
+            <button class="screen-button" onclick="restartGame()">Restart</button>
+        </div>
     </div>
 
     <script type="text/javascript">
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
+        const startScreen = document.getElementById("start-screen");
+        const gameOverScreen = document.getElementById("game-over-screen");
         const characterSelectionDiv = document.getElementById("character-selection");
         const characterOptionsDiv = document.getElementById("character-options");
-        const maxScoreDiv = document.getElementById("max-score");
 
+        let highScore = 0; // Variable to store high score
         let playerCharacter = null;
         let obstacles = [];
         let score = 0;
-        let maxScore = localStorage.getItem('maxScore') || 0;
-        let difficultyIncrement = 0; // Incremento de dificultad
-
-        maxScoreDiv.textContent = `Máxima puntuación: ${maxScore}`;
-
+        let gameSpeed = 1; // Variable to gradually increase game difficulty
         let x = 0;
         let y = 0;
         let keys = {};
 
-        const characterNames = ['rocket1', 'rocket2', 'rocket3', 'rocket4', 'rocket5'];
+        const obstacleImages = [
+            'star1.png', 'star2.png', 'star3.png', 'star4.png', 'star5.png'
+        ];
+
+        const characterNames = [
+            { name: 'Rocket Alpha', image: 'rocket1' },
+            { name: 'Rocket Omega', image: 'rocket2' },
+            { name: 'Rocket Nova', image: 'rocket3' },
+            { name: 'Rocket Stellar', image: 'rocket4' },
+            { name: 'Rocket Comet', image: 'rocket5' }
+        ];
+
         const characters = {};
+        characterNames.forEach(character => {
+            const img = new Image();
+            img.src = `src/assets/rockets/${character.image}.png`;
+            img.onload = () => img.aspectRatio = img.width / img.height;
+            characters[character.image] = img;
+        });
+
+        function loadObstacles() {
+            obstacleImages.forEach(imgName => {
+                const img = new Image();
+                img.src = `src/assets/obstacles/${imgName}`;
+                obstacles.push({
+                    image: img,
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * -canvas.height,
+                    width: 50,
+                    height: 50,
+                    speedY: Math.random() * 2 + 1
+                });
+            });
+        }
 
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         }
         window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-
-        characterNames.forEach(name => {
-            const img = new Image();
-            img.src = `src/assets/rockets/${name}.png`;
-            img.onload = () => img.aspectRatio = img.width / img.height;
-            characters[name] = img;
-        });
 
         function createCharacterSelection() {
-            characterNames.forEach(name => {
+            characterNames.forEach(character => {
                 const characterButton = document.createElement("div");
-                characterButton.style.display = "flex";
-                characterButton.style.flexDirection = "column";
-                characterButton.style.alignItems = "center";
-                characterButton.style.cursor = "pointer";
+                characterButton.className = "character-button";
 
                 const img = document.createElement("img");
-                img.src = `src/assets/rockets/${name}.png`;
-                img.style.width = "150px";
-                img.style.height = "150px";
-                img.style.objectFit = "contain";
-                img.style.border = "2px solid transparent";
-                img.style.transition = "border-color 0.2s";
+                img.src = `src/assets/rockets/${character.image}.png`;
 
                 const label = document.createElement("span");
-                label.textContent = name;
-                label.style.marginTop = "10px";
-                label.style.fontSize = "16px";
+                label.textContent = character.name;
 
                 characterButton.appendChild(img);
                 characterButton.appendChild(label);
 
-                characterButton.addEventListener("mouseover", () => {
-                    img.style.borderColor = "#000";
-                });
-                characterButton.addEventListener("mouseout", () => {
-                    img.style.borderColor = "transparent";
-                });
-
                 characterButton.addEventListener("click", () => {
-                    startGame(name);
+                    startGame(character.image);
                 });
 
                 characterOptionsDiv.appendChild(characterButton);
             });
+        }
+
+        function showCharacterSelection() {
+            startScreen.style.display = "none";
+            characterSelectionDiv.style.display = "flex";
         }
 
         function startGame(selectedCharacter) {
@@ -149,21 +242,8 @@
             keys = {};
             obstacles = [];
             score = 0;
-            difficultyIncrement = 0;
-
-            for (let i = 0; i < 5; i++) {
-                const img = new Image();
-                img.src = `src/assets/obstacles/star${Math.floor(Math.random() * 5) + 1}.png`;
-                obstacles.push({
-                    x: Math.random() * canvas.width,
-                    y: Math.random() * -canvas.height,
-                    width: 50,
-                    height: 50,
-                    image: img,
-                    speedY: Math.random() * 3 + 1
-                });
-            }
-
+            gameSpeed = 1;
+            loadObstacles();
             characterSelectionDiv.style.display = "none";
             canvas.style.display = "block";
             resizeCanvas();
@@ -184,18 +264,11 @@
                 ctx.drawImage(obstacle.image, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
             });
 
-            ctx.font = "20px 'Press Start 2P'";
+            ctx.font = "30px PixelFont";
             ctx.fillStyle = "white";
-            ctx.fillText(`Puntos: ${score}`, canvas.width - 200, 30);
-        }
-
-        function detectCollision(obstacle) {
-            return (
-                x < obstacle.x + obstacle.width &&
-                x + 150 > obstacle.x &&
-                y < obstacle.y + obstacle.height &&
-                y + 150 > obstacle.y
-            );
+            ctx.textAlign = "right";
+            ctx.fillText(`Score: ${score}`, canvas.width - 20, 40);
+            ctx.fillText(`High Score: ${highScore}`, canvas.width - 20, 80);
         }
 
         function update() {
@@ -208,44 +281,46 @@
             y = Math.max(0, Math.min(y, canvas.height - 150));
 
             obstacles.forEach(obstacle => {
-                obstacle.y += obstacle.speedY + difficultyIncrement;
-
+                obstacle.y += obstacle.speedY * gameSpeed;
                 if (obstacle.y > canvas.height) {
                     obstacle.y = -50;
                     obstacle.x = Math.random() * canvas.width;
                     score++;
+                    if (score > highScore) highScore = score;
+                    gameSpeed += 0.01; // Adjusted speed increment
                 }
-
                 if (detectCollision(obstacle)) {
-                    if (score > maxScore) {
-                        maxScore = score;
-                        localStorage.setItem('maxScore', maxScore);
-                        maxScoreDiv.textContent = `Máxima puntuación: ${maxScore}`;
-                    }
-                    alert("¡Perdiste!");
-                    returnToSelection();
+                    showGameOver();
                 }
             });
-
-            difficultyIncrement += 0.001; // Incremento de dificultad progresivo
         }
 
-        function returnToSelection() {
-            x = 0;
-            y = 0;
+        function detectCollision(obstacle) {
+            return (
+                x < obstacle.x + obstacle.width &&
+                x + 150 > obstacle.x &&
+                y < obstacle.y + obstacle.height &&
+                y + 150 > obstacle.y
+            );
+        }
+
+        function showGameOver() {
             playerCharacter = null;
             obstacles = [];
             keys = {};
-
-            characterSelectionDiv.style.display = "flex";
             canvas.style.display = "none";
+            gameOverScreen.style.display = "flex";
+        }
+
+        function restartGame() {
+            gameOverScreen.style.display = "none";
+            showCharacterSelection();
         }
 
         function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
             update();
             draw();
-            if (playerCharacter) requestAnimationFrame(gameLoop);
+            requestAnimationFrame(gameLoop);
         }
 
         document.addEventListener('keydown', (e) => {
