@@ -6,16 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jueguillo</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
         body, html {
             margin: 0;
             padding: 0;
             height: 100%;
-            overflow: hidden; /* Evitar scroll */
+            overflow: hidden;
             background-image: url('src/assets/backgrounds/SpaceBackground1.jpg');
-            background-size: cover; /* Ajusta el fondo de manera uniforme */
-            background-position: center; /* Centra la imagen */
-            background-attachment: fixed; /* Fija el fondo */
-            z-index: 0; /* Asegura que el fondo esté al fondo */
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            font-family: 'Press Start 2P', cursive; /* Tipografía pixelada */
         }
 
         #game-container {
@@ -28,7 +30,6 @@
             position: absolute;
             top: 0;
             left: 0;
-            z-index: 1; /* Asegura que el canvas esté por encima del fondo */
         }
 
         #character-selection {
@@ -37,8 +38,7 @@
             align-items: center;
             flex-wrap: wrap;
             height: 100vh;
-            background-color: rgba(244, 244, 244, 0.8); /* Fondo semi-transparente */
-            z-index: 2; /* Asegura que el selector de personajes esté por encima del fondo */
+            background-color: rgba(244, 244, 244, 0.8);
         }
 
         #character-options {
@@ -47,15 +47,24 @@
             flex-wrap: wrap;
             justify-content: center;
         }
+
+        #max-score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 16px;
+            color: white;
+        }
     </style>
 </head>
 <body>
     <div id="game-container">
         <div id="character-selection">
             <h2 style="width: 100%; text-align: center;">Selecciona tu personaje</h2>
-            <div id="character-options" style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;"></div>
+            <div id="character-options"></div>
         </div>
         <canvas id="canvas" style="display: none;"></canvas>
+        <div id="max-score">Máxima puntuación: 0</div>
     </div>
 
     <script type="text/javascript">
@@ -63,8 +72,23 @@
         const ctx = canvas.getContext("2d");
         const characterSelectionDiv = document.getElementById("character-selection");
         const characterOptionsDiv = document.getElementById("character-options");
+        const maxScoreDiv = document.getElementById("max-score");
 
-        // Ajustar el canvas al tamaño de la ventana
+        let playerCharacter = null;
+        let obstacles = [];
+        let score = 0;
+        let maxScore = localStorage.getItem('maxScore') || 0;
+        let difficultyIncrement = 0; // Incremento de dificultad
+
+        maxScoreDiv.textContent = `Máxima puntuación: ${maxScore}`;
+
+        let x = 0;
+        let y = 0;
+        let keys = {};
+
+        const characterNames = ['rocket1', 'rocket2', 'rocket3', 'rocket4', 'rocket5'];
+        const characters = {};
+
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -72,28 +96,13 @@
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
 
-        // Lista de personajes (deben coincidir con los nombres de los PNG en la carpeta)
-        const characterNames = ['rocket1', 'rocket2', 'rocket3', 'rocket4', 'rocket5'];
-
-        // Cargar imágenes de personajes dinámicamente
-        const characters = {};
         characterNames.forEach(name => {
             const img = new Image();
             img.src = `src/assets/rockets/${name}.png`;
-            img.onload = () => img.aspectRatio = img.width / img.height; // Calcular proporción al cargar
+            img.onload = () => img.aspectRatio = img.width / img.height;
             characters[name] = img;
         });
 
-        let playerCharacter = null; // Imagen del jugador seleccionado
-        let obstacles = []; // Lista de obstáculos
-        let score = 0; // Contador de puntos
-
-        // Variables de posición del jugador
-        let x = 0;
-        let y = 0;
-        let keys = {}; // Variables de teclas
-
-        // Generar opciones de selección de personajes
         function createCharacterSelection() {
             characterNames.forEach(name => {
                 const characterButton = document.createElement("div");
@@ -118,7 +127,6 @@
                 characterButton.appendChild(img);
                 characterButton.appendChild(label);
 
-                // Hover efecto
                 characterButton.addEventListener("mouseover", () => {
                     img.style.borderColor = "#000";
                 });
@@ -126,7 +134,6 @@
                     img.style.borderColor = "transparent";
                 });
 
-                // Seleccionar personaje al hacer clic
                 characterButton.addEventListener("click", () => {
                     startGame(name);
                 });
@@ -135,17 +142,15 @@
             });
         }
 
-        // Iniciar el juego con el personaje seleccionado
         function startGame(selectedCharacter) {
             playerCharacter = characters[selectedCharacter];
-            // Establecer el jugador en el centro horizontal y en la parte inferior
-            x = (canvas.width - 150) / 2; // Centrado horizontal
-            y = canvas.height - 150; // Parte inferior
-            keys = {}; // Reiniciar teclas
+            x = (canvas.width - 150) / 2;
+            y = canvas.height - 150;
+            keys = {};
             obstacles = [];
             score = 0;
+            difficultyIncrement = 0;
 
-            // Generar obstáculos (estrellas)
             for (let i = 0; i < 5; i++) {
                 const img = new Image();
                 img.src = `src/assets/obstacles/star${Math.floor(Math.random() * 5) + 1}.png`;
@@ -159,19 +164,15 @@
                 });
             }
 
-            // Ocultar selector y mostrar canvas
             characterSelectionDiv.style.display = "none";
             canvas.style.display = "block";
             resizeCanvas();
             gameLoop();
         }
 
-        // Dibujar el fondo, el jugador y los obstáculos
         function draw() {
-            // Dibujar fondo
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpiar canvas para evitar superposición
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Dibujar al jugador
             if (playerCharacter) {
                 const aspectRatio = playerCharacter.aspectRatio || 1;
                 const height = 150;
@@ -179,18 +180,15 @@
                 ctx.drawImage(playerCharacter, x, y, width, height);
             }
 
-            // Dibujar obstáculos (estrellas)
             obstacles.forEach(obstacle => {
                 ctx.drawImage(obstacle.image, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
             });
 
-            // Dibujar el contador de puntos
-            ctx.font = "30px Arial";
+            ctx.font = "20px 'Press Start 2P'";
             ctx.fillStyle = "white";
-            ctx.fillText(`Puntos: ${score}`, canvas.width - 150, 30);
+            ctx.fillText(`Puntos: ${score}`, canvas.width - 200, 30);
         }
 
-        // Detectar colisión
         function detectCollision(obstacle) {
             return (
                 x < obstacle.x + obstacle.width &&
@@ -200,66 +198,62 @@
             );
         }
 
-        // Actualizar posición del jugador y de los obstáculos
         function update() {
             if (keys['w'] || keys['ArrowUp']) y -= 5;
             if (keys['a'] || keys['ArrowLeft']) x -= 5;
             if (keys['s'] || keys['ArrowDown']) y += 5;
             if (keys['d'] || keys['ArrowRight']) x += 5;
 
-            // Evitar que el jugador salga de los límites del canvas
             x = Math.max(0, Math.min(x, canvas.width - 150));
             y = Math.max(0, Math.min(y, canvas.height - 150));
 
-            // Mover obstáculos
             obstacles.forEach(obstacle => {
-                obstacle.y += obstacle.speedY;
+                obstacle.y += obstacle.speedY + difficultyIncrement;
 
-                // Si la estrella ha pasado, se reinicia
                 if (obstacle.y > canvas.height) {
-                    obstacle.y = -50; // Reinicia la estrella al tope
-                    obstacle.x = Math.random() * canvas.width; // Nueva posición horizontal
-                    score++; // Aumenta puntos por evitar la estrella
+                    obstacle.y = -50;
+                    obstacle.x = Math.random() * canvas.width;
+                    score++;
                 }
 
-                // Detectar colisión
                 if (detectCollision(obstacle)) {
+                    if (score > maxScore) {
+                        maxScore = score;
+                        localStorage.setItem('maxScore', maxScore);
+                        maxScoreDiv.textContent = `Máxima puntuación: ${maxScore}`;
+                    }
                     alert("¡Perdiste!");
                     returnToSelection();
                 }
             });
+
+            difficultyIncrement += 0.001; // Incremento de dificultad progresivo
         }
 
-        // Volver al selector de personajes
         function returnToSelection() {
-            // Reiniciar variables del jugador
             x = 0;
             y = 0;
             playerCharacter = null;
             obstacles = [];
             keys = {};
 
-            // Mostrar el selector de personajes y ocultar el canvas
             characterSelectionDiv.style.display = "flex";
             canvas.style.display = "none";
         }
 
-        // Bucle del juego
         function gameLoop() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpiar el canvas
-            update(); // Actualizar posiciones
-            draw(); // Dibujar elementos
-            if (playerCharacter) requestAnimationFrame(gameLoop); // Continuar el bucle solo si hay jugador
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            update();
+            draw();
+            if (playerCharacter) requestAnimationFrame(gameLoop);
         }
 
-        // Eventos de teclado
         document.addEventListener('keydown', (e) => {
             keys[e.key] = true;
-            e.preventDefault(); // Prevenir el movimiento de la página
+            e.preventDefault();
         });
         document.addEventListener('keyup', (e) => keys[e.key] = false);
 
-        // Crear opciones de selección de personajes
         createCharacterSelection();
     </script>
 </body>
