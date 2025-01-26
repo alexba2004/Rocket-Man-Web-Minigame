@@ -8,7 +8,7 @@
     <style>
         @font-face {
             font-family: 'PixelFont';
-            src: url('src/assets/fonts/pixel-font.ttf') format('truetype');
+            src: url('src/assets/fonts/04B_30__.TTF') format('truetype');
         }
 
         body, html {
@@ -30,7 +30,7 @@
             top: 0;
             left: 0;
             z-index: 1;
-            background-image: url('src/assets/backgrounds/Background1.jpg');
+            background-image: url('src/assets/backgrounds/SpaceBackground1.jpg');
             background-size: cover;
             background-position: center;
         }
@@ -128,17 +128,24 @@
             color: white;
             text-shadow: 2px 2px black;
         }
+
+        #character-selection h2 {
+            font-size: 50px;
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+        }
     </style>
 </head>
 <body>
     <div id="game-container">
         <div id="start-screen">
             <div class="screen-title">Rocket Man</div>
-            <button class="screen-button" onclick="showCharacterSelection()">Start</button>
+            <button class="screen-button" onclick="showCharacterSelection()">start</button>
         </div>
 
         <div id="character-selection">
-            <h2 style="width: 100%; text-align: center; color: white; font-size: 30px;">Select Your Rocket</h2>
+            <h2>Select Your Rocket</h2>
             <div id="character-options"></div>
         </div>
 
@@ -146,7 +153,7 @@
 
         <div id="game-over-screen" style="display: none;">
             <div class="screen-title">Game Over</div>
-            <button class="screen-button" onclick="restartGame()">Restart</button>
+            <button class="screen-button" onclick="restartGame()">restart</button>
         </div>
     </div>
 
@@ -237,12 +244,12 @@
 
         function startGame(selectedCharacter) {
             playerCharacter = characters[selectedCharacter];
-            x = (canvas.width - 150) / 2;
+            x = (canvas.width - 150) / 2; // Correct positioning for first game
             y = canvas.height - 150;
             keys = {};
             obstacles = [];
             score = 0;
-            gameSpeed = 1;
+            gameSpeed = 1; // Reset speed on restart
             loadObstacles();
             characterSelectionDiv.style.display = "none";
             canvas.style.display = "block";
@@ -287,7 +294,7 @@
                     obstacle.x = Math.random() * canvas.width;
                     score++;
                     if (score > highScore) highScore = score;
-                    gameSpeed += 0.01; // Adjusted speed increment
+                    gameSpeed += 0.01; // Gradual increase in speed
                 }
                 if (detectCollision(obstacle)) {
                     showGameOver();
