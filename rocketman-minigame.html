@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="styles/style.css" type="text/css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego Espacial</title>
+</head>
+<body>
+    <div id="character-selection" style="display: flex; justify-content: center; align-items: center; flex-wrap: wrap; height: 100vh; background-color: #000;">
+        <h2 style="width: 100%; text-align: center; color: #fff;">Selecciona tu cohete</h2>
+        <div id="character-options" style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;"></div>
+    </div>
+    <canvas id="canvas" style="display: none;"></canvas>
+
+    <script type="text/javascript">
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const characterSelectionDiv = document.getElementById("character-selection");
+        const characterOptionsDiv = document.getElementById("character-options");
+
+        // Ajustar el canvas al tamaño de la ventana
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Cargar la imagen de fondo
+        const imagenFondo = new Image();
+        imagenFondo.src = 'src/assets/backgrounds/Background1.jpg';
+
+        // Lista de cohetes (deben coincidir con los nombres de los PNG en la carpeta)
+        const rocketNames = ['rocket1', 'rocket2', 'rocket3', 'rocket4', 'rocket5'];
+
+        // Cargar imágenes de cohetes dinámicamente
+        const rockets = {};
+        rocketNames.forEach(name => {
+            const img = new Image();
+            img.src = `src/assets/rockets/${name}.png`;
+            img.onload = () => img.aspectRatio = img.width / img.height; // Calcular proporción al cargar
+            rockets[name] = img;
+        });
+
+        let playerRocket = null; // Imagen del jugador seleccionado
+        let stars = []; // Lista de estrellas que caen
+
+        // Variables de posición del jugador
+        let x = 100;
+        let y = 100;
+        let keys = {}; // Variables de teclas
+
+        // Generar opciones de selección de cohetes
+        function createCharacterSelection() {
+            rocketNames.forEach(name => {
+                const rocketButton = document.createElement("div");
+                rocketButton.style.display = "flex";
+                rocketButton.style.flexDirection = "column";
+                rocketButton.style.alignItems = "center";
+                rocketButton.style.cursor = "pointer";
+
+                const img = document.createElement("img");
+                img.src = `src/assets/rockets/${name}.png`;
+                img.style.width = "150px";
+                img.style.height = "150px";
+                img.style.objectFit = "contain";
+                img.style.border = "2px solid transparent";
+                img.style.transition = "border-color 0.2s";
+
+                const label = document.createElement("span");
+                label.textContent = name;
+                label.style.marginTop = "10px";
+                label.style.fontSize = "16px";
+                label.style.color = "#fff";
+
+                rocketButton.appendChild(img);
+                rocketButton.appendChild(label);
+
+                // Hover efecto
+                rocketButton.addEventListener("mouseover", () => {
+                    img.style.borderColor = "#ff0";
+                });
+                rocketButton.addEventListener("mouseout", () => {
+                    img.style.borderColor = "transparent";
+                });
+
+                // Seleccionar cohete al hacer clic
+                rocketButton.addEventListener("click", () => {
+                    startGame(name);
+                });
+
+                characterOptionsDiv.appendChild(rocketButton);
+            });
+        }
+
+        // Iniciar el juego con el cohete seleccionado
+        function startGame(selectedRocket) {
+            playerRocket = rockets[selectedRocket];
+            x = 100;
+            y = 100;
+            keys = {}; // Reiniciar teclas
+            stars = Array.from({ length: 10 }, () => {
+                const starIndex = Math.floor(Math.random() * 5) + 1;
+                const star = new Image();
+                star.src = `src/assets/obstacles/star${starIndex}.png`;
+                return {
+                    x: Math.random() * canvas.width,
+                    y: -Math.random() * canvas.height,
+                    width: 30,
+                    height: 30,
+                    speedY: Math.random() * 3 + 2,
+                    image: star
+                };
+            });
+
+            // Ocultar selector y mostrar canvas
+            characterSelectionDiv.style.display = "none";
+            canvas.style.display = "block";
+            resizeCanvas();
+            gameLoop();
+        }
+
+        // Dibujar el fondo, el jugador y las estrellas
+        function draw() {
+            // Dibujar fondo
+            ctx.drawImage(imagenFondo, 0, 0, canvas.width, canvas.height);
+
+            // Dibujar al jugador
+            if (playerRocket) {
+                const aspectRatio = playerRocket.aspectRatio || 1;
+                const height = 100;
+                const width = height * aspectRatio;
+                ctx.drawImage(playerRocket, x, y, width, height);
+            }
+
+            // Dibujar estrellas
+            stars.forEach(star => {
+                ctx.drawImage(star.image, star.x, star.y, star.width, star.height);
+            });
+        }
+
+        // Detectar colisión
+        function detectCollision(star) {
+            return (
+                x < star.x + star.width &&
+                x + 100 > star.x &&
+                y < star.y + star.height &&
+                y + 100 > star.y
+            );
+        }
+
+        // Actualizar posición del jugador y las estrellas
+        function update() {
+            if (keys['w'] || keys['ArrowUp']) y -= 5;
+            if (keys['a'] || keys['ArrowLeft']) x -= 5;
+            if (keys['s'] || keys['ArrowDown']) y += 5;
+            if (keys['d'] || keys['ArrowRight']) x += 5;
+
+            // Evitar que el jugador salga de los límites del canvas
+            x = Math.max(0, Math.min(x, canvas.width - 100));
+            y = Math.max(0, Math.min(y, canvas.height - 100));
+
+            // Mover estrellas
+            stars.forEach(star => {
+                star.y += star.speedY;
+
+                // Si la estrella se ha salido del canvas, la reincidimos
+                if (star.y > canvas.height) {
+                    star.y = -Math.random() * canvas.height;
+                    star.x = Math.random() * canvas.width;
+                }
+
+                // Detectar colisión
+                if (detectCollision(star)) {
+                    alert("¡Has chocado con una estrella! ¡Perdiste!");
+                    returnToSelection();
+                }
+            });
+        }
+
+        // Volver al selector de personajes
+        function returnToSelection() {
+            // Reiniciar variables del jugador
+            x = 100;
+            y = 100;
+            playerRocket = null;
+            stars = [];
+            keys = {};
+
+            // Mostrar el selector de cohetes y ocultar el canvas
+            characterSelectionDiv.style.display = "flex";
+            canvas.style.display = "none";
+        }
+
+        // Bucle del juego
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpiar el canvas
+            update(); // Actualizar posiciones
+            draw(); // Dibujar elementos
+            if (playerRocket) requestAnimationFrame(gameLoop); // Continuar el bucle solo si hay jugador
+        }
+
+        // Eventos de teclado
+        document.addEventListener('keydown', (e) => keys[e.key] = true);
+        document.addEventListener('keyup', (e) => keys[e.key] = false);
+
+        // Crear opciones de selección de cohetes
+        createCharacterSelection();
+    </script>
+</body>
+</html>
+
