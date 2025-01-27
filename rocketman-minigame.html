@@ -173,6 +173,7 @@
         let x = 0;
         let y = 0;
         let keys = {};
+        let isGameRunning = false;
 
         const obstacleImages = [
             'star1.png', 'star2.png', 'star3.png', 'star4.png', 'star5.png'
@@ -243,8 +244,9 @@
         }
 
         function startGame(selectedCharacter) {
+            isGameRunning = true; // Activamos el estado del juego
             playerCharacter = characters[selectedCharacter];
-            resizeCanvas(); // Aseguramos que el canvas está correctamente ajustado antes de calcular posiciones
+            resizeCanvas(); // Ajustamos el canvas
             x = (canvas.width - 150) / 2; // Centrado horizontalmente
             y = canvas.height - 150; // Posicionado en la parte inferior
             keys = {};
@@ -254,8 +256,8 @@
             loadObstacles();
             characterSelectionDiv.style.display = "none";
             canvas.style.display = "block";
-            gameLoop();
-        }        
+            gameLoop(); // Iniciamos el bucle del juego
+        }     
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -320,15 +322,25 @@
         }
 
         function restartGame() {
-            gameSpeed = 1;
-            gameOverScreen.style.display = "none";
-            showCharacterSelection();
+            isGameRunning = false; // Detenemos el bucle del juego
+            cancelAnimationFrame(gameLoopId); // Detenemos cualquier animación activa
+            playerCharacter = null; // Reiniciamos el personaje seleccionado
+            obstacles = []; // Limpiamos los obstáculos
+            keys = {}; // Reiniciamos los controles
+            score = 0; // Reiniciamos el puntaje
+            gameSpeed = 1; // Reiniciamos la velocidad del juego
+            gameOverScreen.style.display = "none"; // Ocultamos la pantalla de Game Over
+            canvas.style.display = "none"; // Ocultamos el canvas por ahora
+            showCharacterSelection(); // Volvemos a la pantalla de selección de personajes
         }
+        
+        let gameLoopId; 
 
         function gameLoop() {
+            if (!isGameRunning) return; // Detenemos la ejecución si el juego no está corriendo
             update();
             draw();
-            requestAnimationFrame(gameLoop);
+            gameLoopId = requestAnimationFrame(gameLoop); // Guardamos el ID de la animación
         }
 
         document.addEventListener('keydown', (e) => {
