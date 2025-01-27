@@ -27,6 +27,33 @@
     </div>
 
     <script type="text/javascript">
+        const themeMusic = new Audio("assets/audios/ThemeSong.mp3");
+        const ingameMusic = new Audio("assets/audios/IngameSong.mp3");
+        const gameoverMusic = new Audio("assets/audios/GameOverSong.mp3");
+        
+        [themeMusic, ingameMusic, gameoverMusic].forEach(audio => {
+            audio.loop = true; // Repite automáticamente
+            audio.volume = 0.5; // Ajusta el volumen inicial
+        });
+
+        let audioUnlocked = false;
+
+        function unlockAudio() {
+            if (!audioUnlocked) {
+                [themeMusic, ingameMusic, gameoverMusic].forEach(audio => {
+                    audio.play().then(() => {
+                        audio.pause();
+                        audio.currentTime = 0; // Reinicia el audio tras desbloquearlo
+                    }).catch(error => console.log("Error desbloqueando audio:", error));
+                });
+                audioUnlocked = true;
+                console.log("Audio desbloqueado");
+            }
+        }
+        
+        // Escucha un clic en cualquier lugar de la página
+        document.body.addEventListener("click", unlockAudio, { once: true });
+
         const canvas = document.getElementById("canvas");
         const ctx = canvas.getContext("2d");
         const startScreen = document.getElementById("start-screen");
@@ -108,11 +135,17 @@
         }
 
         function showCharacterSelection() {
+            themeMusic.play();
             startScreen.style.display = "none";
             characterSelectionDiv.style.display = "flex";
         }
 
         function startGame(selectedCharacter) {
+            themeMusic.pause(); // Detiene la música del menú
+            themeMusic.currentTime = 0; // Reinicia al inicio
+        
+            ingameMusic.play(); // Reproduce la música del juego
+        
             isGameRunning = true; // Activamos el estado del juego
             playerCharacter = characters[selectedCharacter];
             resizeCanvas(); // Ajustamos el canvas
@@ -126,7 +159,7 @@
             characterSelectionDiv.style.display = "none";
             canvas.style.display = "block";
             gameLoop(); // Iniciamos el bucle del juego
-        }     
+        }          
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -207,14 +240,24 @@
         }        
 
         function showGameOver() {
+            ingameMusic.pause(); // Detiene la música del juego
+            ingameMusic.currentTime = 0; // Reinicia al inicio
+        
+            gameoverMusic.play(); // Reproduce la música de Game Over
+        
             playerCharacter = null;
             obstacles = [];
             keys = {};
             canvas.style.display = "none";
             gameOverScreen.style.display = "flex";
-        }
+        }        
 
         function restartGame() {
+            gameoverMusic.pause(); // Detiene la música de Game Over
+            gameoverMusic.currentTime = 0; // Reinicia al inicio
+        
+            themeMusic.play(); // Reproduce la música del menú
+        
             isGameRunning = false; // Detenemos el bucle del juego
             cancelAnimationFrame(gameLoopId); // Detenemos cualquier animación activa
             playerCharacter = null; // Reiniciamos el personaje seleccionado
@@ -225,7 +268,7 @@
             gameOverScreen.style.display = "none"; // Ocultamos la pantalla de Game Over
             canvas.style.display = "none"; // Ocultamos el canvas por ahora
             showCharacterSelection(); // Volvemos a la pantalla de selección de personajes
-        }
+        }        
         
         let gameLoopId; 
 
