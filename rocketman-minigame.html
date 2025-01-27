@@ -305,13 +305,29 @@
         }
 
         function detectCollision(obstacle) {
+            // Define un porcentaje para ajustar las zonas de impacto
+            const impactZoneFactor = 0.7; // Ajusta según el nivel de precisión que desees
+        
+            // Bounding box ajustada del rocket
+            const rocketImpactWidth = 150 * impactZoneFactor;
+            const rocketImpactHeight = 150 * impactZoneFactor;
+            const rocketImpactX = x + (150 - rocketImpactWidth) / 2;
+            const rocketImpactY = y + (150 - rocketImpactHeight) / 2;
+        
+            // Bounding box ajustada del obstáculo
+            const obstacleImpactWidth = obstacle.width * impactZoneFactor;
+            const obstacleImpactHeight = obstacle.height * impactZoneFactor;
+            const obstacleImpactX = obstacle.x + (obstacle.width - obstacleImpactWidth) / 2;
+            const obstacleImpactY = obstacle.y + (obstacle.height - obstacleImpactHeight) / 2;
+        
+            // Detecta colisiones basándose en las bounding boxes ajustadas
             return (
-                x < obstacle.x + obstacle.width &&
-                x + 150 > obstacle.x &&
-                y < obstacle.y + obstacle.height &&
-                y + 150 > obstacle.y
+                rocketImpactX < obstacleImpactX + obstacleImpactWidth &&
+                rocketImpactX + rocketImpactWidth > obstacleImpactX &&
+                rocketImpactY < obstacleImpactY + obstacleImpactHeight &&
+                rocketImpactY + rocketImpactHeight > obstacleImpactY
             );
-        }
+        }        
 
         function showGameOver() {
             playerCharacter = null;
