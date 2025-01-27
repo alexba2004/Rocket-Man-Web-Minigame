@@ -279,30 +279,38 @@
             ctx.fillText(`Score: ${score}`, canvas.width - 20, 40);
             ctx.fillText(`High Score: ${highScore}`, canvas.width - 20, 80);
         }
-
+        
         function update() {
-            if (keys['w'] || keys['ArrowUp']) y -= 5;
-            if (keys['a'] || keys['ArrowLeft']) x -= 5;
-            if (keys['s'] || keys['ArrowDown']) y += 5;
-            if (keys['d'] || keys['ArrowRight']) x += 5;
-
+            // Velocidad base del movimiento del rocket
+            const baseSpeed = 5;
+        
+            // Movimiento del rocket sincronizado con el aumento de velocidad del juego
+            const rocketSpeed = baseSpeed * gameSpeed;
+        
+            if (keys['w'] || keys['ArrowUp']) y -= rocketSpeed;
+            if (keys['a'] || keys['ArrowLeft']) x -= rocketSpeed;
+            if (keys['s'] || keys['ArrowDown']) y += rocketSpeed;
+            if (keys['d'] || keys['ArrowRight']) x += rocketSpeed;
+        
+            // Asegurarse de que el rocket no salga de los límites del canvas
             x = Math.max(0, Math.min(x, canvas.width - 150));
             y = Math.max(0, Math.min(y, canvas.height - 150));
-
+        
+            // Actualización de los obstáculos
             obstacles.forEach(obstacle => {
-                obstacle.y += obstacle.speedY * gameSpeed;
+                obstacle.y += obstacle.speedY * gameSpeed; // Velocidad aumentada con gameSpeed
                 if (obstacle.y > canvas.height) {
                     obstacle.y = -50;
                     obstacle.x = Math.random() * canvas.width;
-                    score++;
-                    if (score > highScore) highScore = score;
-                    gameSpeed += 0.01; // Gradual increase in speed
+                    score++; // Incrementa el puntaje
+                    if (score > highScore) highScore = score; // Actualiza el high score
+                    gameSpeed += 0.01; // Incrementa la velocidad del juego
                 }
                 if (detectCollision(obstacle)) {
-                    showGameOver();
+                    showGameOver(); // Si hay colisión, termina el juego
                 }
             });
-        }
+        }        
 
         function detectCollision(obstacle) {
             // Define un porcentaje para ajustar las zonas de impacto
