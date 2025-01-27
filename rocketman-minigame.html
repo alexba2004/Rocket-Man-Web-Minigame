@@ -244,18 +244,18 @@
 
         function startGame(selectedCharacter) {
             playerCharacter = characters[selectedCharacter];
-            x = (canvas.width - 150) / 2; // Correct positioning for first game
-            y = canvas.height - 150;
+            resizeCanvas(); // Aseguramos que el canvas está correctamente ajustado antes de calcular posiciones
+            x = (canvas.width - 150) / 2; // Centrado horizontalmente
+            y = canvas.height - 150; // Posicionado en la parte inferior
             keys = {};
             obstacles = [];
             score = 0;
-            gameSpeed = 1; // Reset speed on restart
+            gameSpeed = 1; // Reiniciamos la velocidad al iniciar el juego
             loadObstacles();
             characterSelectionDiv.style.display = "none";
             canvas.style.display = "block";
-            resizeCanvas();
             gameLoop();
-        }
+        }        
 
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -320,6 +320,7 @@
         }
 
         function restartGame() {
+            gameSpeed = 1;
             gameOverScreen.style.display = "none";
             showCharacterSelection();
         }
