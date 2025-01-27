@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="styles/style.css" type="text/css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rocket Man</title>
+    <style>
+        @font-face {
+            font-family: 'PixelFont';
+            src: url('assets/fonts/04B_30__.TTF') format('truetype');
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'PixelFont', sans-serif;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+            background-image: url('assets/backgrounds/SpaceBackground1.jpg');
+            background-size: cover;
+            background-position: center;
+        }
+
+        #start-screen, #game-over-screen {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            text-align: center;
+            font-family: 'PixelFont', sans-serif;
+        }
+
+        #start-screen {
+            background-image: url('assets/backgrounds/Background1.jpg');
+        }
+
+        #game-over-screen {
+            background-image: url('assets/backgrounds/Background2.jpg');
+        }
+
+        .screen-title {
+            font-size: 50px;
+            color: white;
+            text-shadow: 2px 2px black;
+            margin-bottom: 20px;
+        }
+
+        .screen-button {
+            font-size: 25px;
+            color: white;
+            background-color: black;
+            border: 3px solid white;
+            padding: 10px 40px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-family: 'PixelFont', sans-serif;
+        }
+
+        .screen-button:hover {
+            background-color: white;
+            color: black;
+        }
+
+        #character-selection {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            height: 100vh;
+            background-color: black;
+            z-index: 2;
+            font-family: 'PixelFont', sans-serif;
+        }
+
+        #character-options {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .character-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .character-button img {
+            width: 200px;
+            height: 200px;
+            object-fit: contain;
+            border: 3px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .character-button span {
+            margin-top: 10px;
+            font-size: 20px;
+            color: white;
+        }
+
+        .character-button:hover img {
+            border-color: white;
+        }
+
+        .score {
+            font-size: 30px;
+            color: white;
+            text-shadow: 2px 2px black;
+        }
+
+        #character-selection h2 {
+            font-size: 50px;
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="start-screen">
+            <div class="screen-title">Rocket Man</div>
+            <button class="screen-button" onclick="showCharacterSelection()">start</button>
+        </div>
+
+        <div id="character-selection">
+            <h2>Select Your Rocket</h2>
+            <div id="character-options"></div>
+        </div>
+
+        <canvas id="canvas" style="display: none;"></canvas>
+
+        <div id="game-over-screen" style="display: none;">
+            <div class="screen-title">Game Over</div>
+            <button class="screen-button" onclick="restartGame()">restart</button>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        const startScreen = document.getElementById("start-screen");
+        const gameOverScreen = document.getElementById("game-over-screen");
+        const characterSelectionDiv = document.getElementById("character-selection");
+        const characterOptionsDiv = document.getElementById("character-options");
+
+        let highScore = 0; // Variable to store high score
+        let playerCharacter = null;
+        let obstacles = [];
+        let score = 0;
+        let gameSpeed = 1; // Variable to gradually increase game difficulty
+        let x = 0;
+        let y = 0;
+        let keys = {};
+        let isGameRunning = false;
+
+        const obstacleImages = [
+            'star1.png', 'star2.png', 'star3.png', 'star4.png', 'star5.png'
+        ];
+
+        const characterNames = [
+            { name: 'Rocket Alpha', image: 'rocket1' },
+            { name: 'Rocket Omega', image: 'rocket2' },
+            { name: 'Rocket Nova', image: 'rocket3' },
+            { name: 'Rocket Stellar', image: 'rocket4' },
+            { name: 'Rocket Comet', image: 'rocket5' }
+        ];
+
+        const characters = {};
+        characterNames.forEach(character => {
+            const img = new Image();
+            img.src = `assets/rockets/${character.image}.png`;
+            img.onload = () => img.aspectRatio = img.width / img.height;
+            characters[character.image] = img;
+        });
+
+        function loadObstacles() {
+            obstacleImages.forEach(imgName => {
+                const img = new Image();
+                img.src = `assets/obstacles/${imgName}`;
+                obstacles.push({
+                    image: img,
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * -canvas.height,
+                    width: 50,
+                    height: 50,
+                    speedY: Math.random() * 2 + 1
+                });
+            });
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function createCharacterSelection() {
+            characterNames.forEach(character => {
+                const characterButton = document.createElement("div");
+                characterButton.className = "character-button";
+
+                const img = document.createElement("img");
+                img.src = `assets/rockets/${character.image}.png`;
+
+                const label = document.createElement("span");
+                label.textContent = character.name;
+
+                characterButton.appendChild(img);
+                characterButton.appendChild(label);
+
+                characterButton.addEventListener("click", () => {
+                    startGame(character.image);
+                });
+
+                characterOptionsDiv.appendChild(characterButton);
+            });
+        }
+
+        function showCharacterSelection() {
+            startScreen.style.display = "none";
+            characterSelectionDiv.style.display = "flex";
+        }
+
+        function startGame(selectedCharacter) {
+            isGameRunning = true; // Activamos el estado del juego
+            playerCharacter = characters[selectedCharacter];
+            resizeCanvas(); // Ajustamos el canvas
+            x = (canvas.width - 150) / 2; // Centrado horizontalmente
+            y = canvas.height - 150; // Posicionado en la parte inferior
+            keys = {};
+            obstacles = [];
+            score = 0;
+            gameSpeed = 1; // Reiniciamos la velocidad al iniciar el juego
+            loadObstacles();
+            characterSelectionDiv.style.display = "none";
+            canvas.style.display = "block";
+            gameLoop(); // Iniciamos el bucle del juego
+        }     
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (playerCharacter) {
+                const aspectRatio = playerCharacter.aspectRatio || 1;
+                const height = 150;
+                const width = height * aspectRatio;
+                ctx.drawImage(playerCharacter, x, y, width, height);
+            }
+
+            obstacles.forEach(obstacle => {
+                ctx.drawImage(obstacle.image, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            });
+
+            ctx.font = "30px PixelFont";
+            ctx.fillStyle = "white";
+            ctx.textAlign = "right";
+            ctx.fillText(`Score: ${score}`, canvas.width - 20, 40);
+            ctx.fillText(`High Score: ${highScore}`, canvas.width - 20, 80);
+        }
+        
+        function update() {
+            // Velocidad base del movimiento del rocket
+            const baseSpeed = 5;
+        
+            // Movimiento del rocket sincronizado con el aumento de velocidad del juego
+            const rocketSpeed = baseSpeed * gameSpeed;
+        
+            if (keys['w'] || keys['ArrowUp']) y -= rocketSpeed;
+            if (keys['a'] || keys['ArrowLeft']) x -= rocketSpeed;
+            if (keys['s'] || keys['ArrowDown']) y += rocketSpeed;
+            if (keys['d'] || keys['ArrowRight']) x += rocketSpeed;
+        
+            // Asegurarse de que el rocket no salga de los límites del canvas
+            x = Math.max(0, Math.min(x, canvas.width - 150));
+            y = Math.max(0, Math.min(y, canvas.height - 150));
+        
+            // Actualización de los obstáculos
+            obstacles.forEach(obstacle => {
+                obstacle.y += obstacle.speedY * gameSpeed; // Velocidad aumentada con gameSpeed
+                if (obstacle.y > canvas.height) {
+                    obstacle.y = -50;
+                    obstacle.x = Math.random() * canvas.width;
+                    score++; // Incrementa el puntaje
+                    if (score > highScore) highScore = score; // Actualiza el high score
+                    gameSpeed += 0.01; // Incrementa la velocidad del juego
+                }
+                if (detectCollision(obstacle)) {
+                    showGameOver(); // Si hay colisión, termina el juego
+                }
+            });
+        }        
+
+        function detectCollision(obstacle) {
+            // Define un porcentaje para ajustar las zonas de impacto
+            const impactZoneFactor = 0.7; // Ajusta según el nivel de precisión que desees
+        
+            // Bounding box ajustada del rocket
+            const rocketImpactWidth = 150 * impactZoneFactor;
+            const rocketImpactHeight = 150 * impactZoneFactor;
+            const rocketImpactX = x + (150 - rocketImpactWidth) / 2;
+            const rocketImpactY = y + (150 - rocketImpactHeight) / 2;
+        
+            // Bounding box ajustada del obstáculo
+            const obstacleImpactWidth = obstacle.width * impactZoneFactor;
+            const obstacleImpactHeight = obstacle.height * impactZoneFactor;
+            const obstacleImpactX = obstacle.x + (obstacle.width - obstacleImpactWidth) / 2;
+            const obstacleImpactY = obstacle.y + (obstacle.height - obstacleImpactHeight) / 2;
+        
+            // Detecta colisiones basándose en las bounding boxes ajustadas
+            return (
+                rocketImpactX < obstacleImpactX + obstacleImpactWidth &&
+                rocketImpactX + rocketImpactWidth > obstacleImpactX &&
+                rocketImpactY < obstacleImpactY + obstacleImpactHeight &&
+                rocketImpactY + rocketImpactHeight > obstacleImpactY
+            );
+        }        
+
+        function showGameOver() {
+            playerCharacter = null;
+            obstacles = [];
+            keys = {};
+            canvas.style.display = "none";
+            gameOverScreen.style.display = "flex";
+        }
+
+        function restartGame() {
+            isGameRunning = false; // Detenemos el bucle del juego
+            cancelAnimationFrame(gameLoopId); // Detenemos cualquier animación activa
+            playerCharacter = null; // Reiniciamos el personaje seleccionado
+            obstacles = []; // Limpiamos los obstáculos
+            keys = {}; // Reiniciamos los controles
+            score = 0; // Reiniciamos el puntaje
+            gameSpeed = 1; // Reiniciamos la velocidad del juego
+            gameOverScreen.style.display = "none"; // Ocultamos la pantalla de Game Over
+            canvas.style.display = "none"; // Ocultamos el canvas por ahora
+            showCharacterSelection(); // Volvemos a la pantalla de selección de personajes
+        }
+        
+        let gameLoopId; 
+
+        function gameLoop() {
+            if (!isGameRunning) return; // Detenemos la ejecución si el juego no está corriendo
+            update();
+            draw();
+            gameLoopId = requestAnimationFrame(gameLoop); // Guardamos el ID de la animación
+        }
+
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            e.preventDefault();
+        });
+        document.addEventListener('keyup', (e) => keys[e.key] = false);
+
+        createCharacterSelection();
+    </script>
+</body>
+</html>
