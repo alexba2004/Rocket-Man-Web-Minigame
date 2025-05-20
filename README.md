@@ -27,7 +27,7 @@ To begin playing Rocket-Man Web Minigame:
 Download the project to your local machine using Git:
 
 ```
-git clone [https://github.com/your-username/Rocket-Man-Web-Minigame.git](https://github.com/alexba2004/Rocket-Man-Web-Minigame.git)
+git clone https://github.com/alexba2004/Rocket-Man-Web-Minigame.git
 ```
 
 **2. Open the HTML File**  
